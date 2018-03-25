@@ -4,6 +4,7 @@ import datetime
 import pyautogui
 import numpy as np
 import os, os.path
+import pyperclip
 from PIL import Image
 from settings import PASSWORD, NAME
 
@@ -18,8 +19,9 @@ ROLLS_FOLDER = 'rolls'
 pyautogui.PAUSE = PAUSE_TIME
 pyautogui.FAILSAFE = True
 
-HOME_BUTTON = {'x': 1300, 'y': 670}
-GO_ICON = {'x': 650, 'y': 380}
+HOME_BUTTON = {'x': 1301, 'y': 676}
+GO_ICON = {'x': 1049, 'y': 379}
+APP_INFO = {'x': 44, 'y': 185}
 CLEAR_DATA_ICON = {'x': 420, 'y': 380}
 SKIP_BUTTON = {'x': 1200, 'y': 70}
 CONFIRM = {'x': 830, 'y': 600}
@@ -33,22 +35,59 @@ CLOSE = {'x': 640, 'y': 590}
 MENU = {'x': 1190, 'y': 715}
 LEFT_EDGE = {'x': 10,'y': 400}
 
+SERV_HEIGHT = 540
+CES_HEIGHT = 350
+BIND_CODE_HEIGHT = 70
+
+WIN_X = 0
+WIN_Y = 0
+
 def wait(given_time):
     time.sleep(TIMING_MULT * given_time)
 
 def touch(x, y):
-    pyautogui.click(x=x, y=y)
+    pyautogui.click(x=WIN_X+x, y=WIN_Y+y)
+
+def move_to(x, y):
+    pyautogui.moveTo(WIN_X + x, WIN_Y + y)
+
+def drag_to(x, y, duration=0, button='left', tween=pyautogui.linear):
+    pyautogui.dragTo(WIN_X + x, WIN_Y + y, duration=duration, button=button, tween=tween)
 
 def skip_scene():
+    wait_for_loading()
+
     touch(**SKIP_BUTTON)
     touch(**CONFIRM)
 
 def close_app():
     touch(**HOME_BUTTON)
-    touch(x=1300, y=700)                                            # App Switcher
-    pyautogui.moveTo(1150, 400)                                     # Move Cursor Over GO
-    pyautogui.dragTo(1150, 100, button='left')
+    touch(x=1300, y=700)
+
+    while True:
+        result = wait_until('close_app_screen', 'close_app_empty', maxTries = 5)
+
+        if result == 0:
+            # App Switcher
+            move_to(1150, 400)                                      # Move Cursor Over GO
+            drag_to(1150, 100, duration = .5)
+            wait(1)
+        elif result == 1:                                           # All apps closed
+            break
+        elif result == None:                                        # Still apps open, but not fate
+            break
+
+def clear_app():
+    touch(**HOME_BUTTON)
+    
+    # Open App Info
+    move_to(**GO_ICON)
+    drag_to(**APP_INFO, duration=5, tween=pyautogui.easeInQuad)
+    
+    wait_until('app_info')
+    touch(982, 596)                                                 # Press delete data
     wait(1)
+    touch(812, 505)                                                 # Press Ok
 
 def select_card(card_no):
     locations = {1: 140, 2: 390, 3: 650, 4: 900, 5: 1160}
@@ -61,7 +100,7 @@ def image_is_on_screen(template_name):
                     cv2.IMREAD_GRAYSCALE)
     image = cv2.cvtColor(
                 np.array(pyautogui.screenshot(
-                        region=(0, 0, 1300, 750))), 
+                        region=(WIN_X, WIN_Y, 1300, 750))), 
                 cv2.COLOR_BGR2GRAY)
 
     res = cv2.matchTemplate(image, template, cv2.TM_CCOEFF_NORMED)
@@ -75,35 +114,85 @@ def image_is_on_screen(template_name):
 
 def click_until(*images):
     pyautogui.PAUSE = 0.2 * PAUSE_TIME
+    
     while True:
+        while not window_visible():
+            wait(1)
         for pos, image in enumerate(images):
             if image_is_on_screen(image):
                 pyautogui.PAUSE = PAUSE_TIME
                 wait(0.5)
                 return pos
 
-        for _ in range(10):
+        for _ in range(3):
             touch(**LEFT_EDGE)
 
-def wait_until(*images):
+def wait_until(*images, maxTries=None):
     while True:
         for pos, image in enumerate(images):
             if image_is_on_screen(image):
                 wait(0.5)
                 return pos
+        if maxTries is not None:
+            maxTries -= 1
+            if maxTries <= 0:
+                return None
+
+def wait_for_loading():
+    notLoading = 0
+    while notLoading < 3:
+        if wait_until('connecting', 'loading', maxTries=2) is None:
+            notLoading += 1
+        else:
+            notLoading = 0
+            wait(0.5)
+
+def window_location():
+    return pyautogui.locateOnScreen(os.path.join(
+                                'screenshots', 
+                                'window.png'))
+def window_visible():
+    return window_location() is not None
 
 if __name__ == '__main__':
 
     if not os.path.exists(ROLLS_FOLDER):
         os.mkdir(ROLLS_FOLDER)
 
+    window_msg = False
+    while not window_visible():
+        if not window_msg:
+            print("Waiting for window...")
+            window_msg = True
+        wait(1)
+
+    winlocation = window_location()
+    if winlocation is None:
+        print('window not found!')
+        exit(1)
+
+    WIN_X = winlocation[0]
+    WIN_Y = winlocation[1]
+
+    app = pyautogui.screenshot(
+                region=(WIN_X, WIN_Y, 1300, 750))
+
+    results = Image.new('RGB', (1300, 750))
+    results.paste(app, (0, 0))
+    results.save(os.path.join(ROLLS_FOLDER,
+                            'app.png'))
+
     while True:
+        # Clear Data
+        close_app()
+        clear_app()
+        
 
         # First Launch
         touch(**HOME_BUTTON)
         touch(**GO_ICON)                                            # Game Icon
 
-        result = wait_until('title_screen',
+        result = wait_until('title_screen2',
                             'ip_ban',
                             'grand_order_icon',
                             'crash_from_launcher',
@@ -131,21 +220,6 @@ if __name__ == '__main__':
             touch(**CLEAR_DATA_ICON)
             wait(1)
             continue
-
-        # Setup Folders For This Run
-
-        folder_name = os.path.join(ROLLS_FOLDER,
-            datetime.datetime.now().strftime('%y_%m_%d_%H_%M'))
-        
-        lock_file = os.path.join(folder_name, '.done')
-
-        try:
-            os.mkdir(folder_name)
-            open(lock_file, 'a').close()
-        except FileExistsError:
-            pass                                                    # Tbh idk what to do if this happens
-        except WindowsError:                                
-            pass                                                    # Folder already exists
 
         # Intro
         click_until('terms_of_service')
@@ -191,6 +265,7 @@ if __name__ == '__main__':
 
         wait_until('skip_2')
         skip_scene()
+
         wait_until('name_prompt')
         touch(**NAME_FIELD)
         pyautogui.typewrite(NAME, interval = 0.25)
@@ -201,7 +276,7 @@ if __name__ == '__main__':
         wait_until('skip_3')
         skip_scene()
 
-        wait_until('mission_select_protag_dimmed')
+        wait_until('mission_x-a')
         touch(x=650, y=390)                                         # Mission Select 1
         touch(x=1000, y=200)                                        # Mission Select 2
         wait_until('skip_4')
@@ -348,44 +423,56 @@ if __name__ == '__main__':
         wait_until('skip_9')
         skip_scene()
 
-        wait_until('mission_select_protag_dimmed')
-        wait(8)
-
-        while True:
-            if image_is_on_screen('bonuses_received'):
-                break
+        result = wait_until('login_bonus', maxTries=20)
+        if result is not None:
             touch(**CLOSE)
+
+            #while True:
+            #    if image_is_on_screen('bonuses_received'):
+            #        break
+            #    touch(**CLOSE)
+
+        touch(x=100, y=75)                                          # Close Button
+        wait(1)
 
         touch(x=440, y=700)                                         # Gift Box
         wait_until('receive_all_gifts_button')
         touch(x=1100, y=250)                                        # Receive All
-        click_until('lock')
-        touch(x=50, y=75)                                           # Close
-        click_until('lock')
-        touch(x=50, y=75)                                           # Close
+        
+        #click_until('lock')
+        #touch(x=50, y=75)                                           # Close
+        #click_until('lock')
+        #touch(x=50, y=75)                                           # Close
+
         wait_until('all_gifts_received')
         touch(x=110, y=90)                                          # Close Prompt
 
         # Multi Summon
 
-        wait_until('mission_select_protag')
+        # wait_until('mission_select_protag')
         touch(**MENU)                                               # Menu Button
         touch(x=540, y=680)                                         # Summon Button
-        wait_until('first_multi_summon_info_prompt')
-        touch(x=1250, y=65)                                         # Close Prompt
-        wait_until('10x_summon_button')
-        touch(x=840, y=600)                                         # Select 10x Summon
-        touch(x=840, y=600)                                         # Confirm Summon
 
-        click_until('first_multi_summon_ce_prompt')
-        touch(x=1250, y=55)
-        wait_until('next_button_during_tutorial_summon')
-        touch(**NEXT)
-        click_until('summon_button_after_tutorial_summon')
+        result = wait_until('first_multi_summon_info_prompt', maxTries=150)
+        if result is None:
+            result = wait_until('first_multi_summon_info_prompt', '1x_summon_button')
+
+        if result == 0:
+            touch(x=1250, y=65)                                         # Close Prompt
+
+        #wait_until('10x_summon_button')
+        #touch(x=840, y=600)                                         # Select 10x Summon
+        #touch(x=840, y=600)                                         # Confirm Summon
+
+        #click_until('first_multi_summon_ce_prompt')
+        #touch(x=1250, y=55)
+        #wait_until('next_button_during_tutorial_summon')
+        #touch(**NEXT)
+        #click_until('summon_button_after_tutorial_summon')
 
         # YOLO Summons
 
-        touch(x=770, y=700)                                         # Summon Button
+        #touch(x=770, y=700)                                         # Summon Button
 
         while True:
             wait_until('1x_summon_button')
@@ -397,11 +484,19 @@ if __name__ == '__main__':
             if result_1 == 1:                                       # More Summons
                 touch(x=830, y=600)                                 # Confirm Summon
                 wait(5)                                             # CV is too fast
+                
                 result_2 = click_until('lock',
                                        'lock_enabled',
-                                       'summon_screen_close')
+                                       'summon_screen_close',
+                                       'summon_screen_close_details')
                 if (result_2 == 0) or (result_2 == 1):
                     touch(x=50, y=75)                               # Close
+                elif result_2 == 3:
+                    touch(1247, 61)                                 # Close
+
+                    result_2 = wait_until('lock', 'lock_enabled', maxTries=15)
+                    if (result_2 == 0) or (result_2 == 1):
+                        touch(x=50, y=75)                               # Close
 
             else:                                                   # No More Summons
                 touch(x=440, y=600)
@@ -411,9 +506,11 @@ if __name__ == '__main__':
 
         touch(**MENU)
         touch(x=175, y=675)                                         # Formation
-        wait_until('party_formation_prompt_close')
-        touch(x=1250, y=70)                                         # Close
-        wait_until('party_formation_prompt_ready')
+        result = wait_until('party_formation_prompt_close', 'party_formation_prompt_ready')
+        if result == 0:
+            touch(x=1250, y=70)                                         # Close
+            wait_until('party_formation_prompt_ready')
+
         touch(x=1000, y=200)                                        # Party Setup
         touch(x=330, y=330)                                         # Open Servants
 
@@ -423,13 +520,18 @@ if __name__ == '__main__':
             touch(x=1125, y=160)                                    # Sort by Rarity
 
         servants = pyautogui.screenshot(
-                region=(85, 200, 1130, 540))
+                region=(WIN_X + 85, WIN_Y + 200, 1130, SERV_HEIGHT))
 
         touch(x=90, y=70)                                           # Close
         touch(x=335, y=510)                                         # Craft Essences
-        wait_until('ce_prompt')
-        touch(x=1075, y=710)                                        # Next
-        touch(x=1250, y=70)                                         # Close
+        
+        result = wait_until('ce_prompt', maxTries=150)
+        if result is None:
+            result = wait_until('ce_prompt', 'ce_list_ready')
+
+        if result == 0:
+            touch(x=1075, y=710)                                        # Next
+            touch(x=1250, y=70)                                         # Close
         
         wait_until('ce_list_ready')
 
@@ -437,23 +539,33 @@ if __name__ == '__main__':
             touch(x=1125, y=160)                                    # Sort by Rarity
 
         ces = pyautogui.screenshot(
-                region=(70, 400, 1130, 340))
+                region=(WIN_X + 70, WIN_Y + 400, 1130, CES_HEIGHT))
 
         touch(x=90, y=70)                                           # Close
         touch(x=90, y=70)                                           # Close
 
-        results = Image.new('RGB', (1130, 880))
-        results.paste(servants, (0, 0))
-        results.paste(ces, (0, 540))
-        results.save(os.path.join(folder_name,
-                                'rolls.png'))
+        # Setup Folders For This Run
+
+        #folder_name = os.path.join(ROLLS_FOLDER,
+        #    datetime.datetime.now().strftime('%y_%m_%d_%H_%M'))
+        
+        #os.mkdir(folder_name)
+
+        #results = Image.new('RGB', (1130, SERV_HEIGHT + CES_HEIGHT))
+        #results.paste(servants, (0, 0))
+        #results.paste(ces, (0, SERV_HEIGHT))
+        #results.save(os.path.join(folder_name,
+        #                        'rolls.png'))
 
         # Bind Code
 
         while True:
             touch(**MENU)
             touch(x=1080, y=680)
-            wait(2)
+
+            wait_until('my_room_prompt')
+            touch(x=1240, y=66)
+
             while not image_is_on_screen('issue_transfer_number_prompt'):
                 touch(x=1260, y=650)                                # Scroll
             touch(x= 950, y=380)                                    # Issue Transfer Number
@@ -486,16 +598,26 @@ if __name__ == '__main__':
                 break
 
         bind_code = pyautogui.screenshot(
-                region=(530, 330, 270, 70))
-        bind_code.save(os.path.join(
-                                folder_name, 'bind_code.png'))
-        touch(x=430, y=600)
+                region=(WIN_X + 530, WIN_Y + 330, 270, BIND_CODE_HEIGHT))
 
-        # Don't tag, too much work.
-        os.remove(lock_file)
+        touch(1009, 353)                                            # Copy Transfer Number
 
-        # Clear Data
+        filename = None
+        transfer_code = pyperclip.paste()
+        if transfer_code is not None:
+            filename = str(transfer_code)
 
-        close_app()
-        touch(**CLEAR_DATA_ICON)
-        wait(1)
+        if not filename:
+            filename = datetime.datetime.now().strftime('%y_%m_%d_%H_%M')
+
+        results = Image.new('RGB', (1130, SERV_HEIGHT + CES_HEIGHT + BIND_CODE_HEIGHT))
+        if servants is not None:
+            results.paste(servants, (0, 0))
+        if ces is not None:
+            results.paste(ces, (0, SERV_HEIGHT))
+
+        results.paste(bind_code, (0, SERV_HEIGHT + CES_HEIGHT))
+        results.save(os.path.join(ROLLS_FOLDER, filename + '.png'))
+
+        # bind_code.save(os.path.join(ROLLS_FOLDER, filename + '.png'))
+        # touch(x=430, y=600)                                         # Close Issue Transfer Number Screen

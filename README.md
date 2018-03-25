@@ -20,7 +20,7 @@ However, it is not perfect. This method of rerolling has two major issues:
 
 # Basic Instructions:
 - [Install Python](https://wiki.python.org/moin/BeginnersGuide/Download). This project uses Python3. **Be sure to tick the 'add to path' button during setup.**
-- Run `pip install pyautogui numpy opencv-python` to install dependencies.
+- Run `pip install pyautogui numpy opencv-python pyperclip` to install dependencies.
 - Download this repo.
 - [Setup MEmu](https://www.reddit.com/r/grandorder/comments/6akkkq/emu_wars_episode_x_return_of_the_emu/)
 - [Get Grand Order Image](https://www.reddit.com/r/grandorder/comments/6jompd/modified_memu_image_with_fgo_na_preloaded_and/)
@@ -52,6 +52,10 @@ Running `python roll_handler.py` will scan the rolls folder every two minutes fo
 If you install Pushbullet.py with `pip install pushbullet.py` and set your [API Key](https://docs.pushbullet.com/v1/) in `settings.py`, then you will also be notified of good rolls.
 
 Be aware that there is no detection of duplicate rolls at this time.
+
+# Links
+- [FGO MEmu Help Pastebin](https://pastebin.com/gseCD37E)
+
 
 
 

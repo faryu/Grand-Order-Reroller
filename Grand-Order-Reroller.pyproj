@@ -1,0 +1,140 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" DefaultTargets="Build">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{42d8d6f7-7a91-46cc-95a3-82ad17b02202}</ProjectGuid>
+    <ProjectHome />
+    <StartupFile>main.py</StartupFile>
+    <SearchPath />
+    <WorkingDirectory>.</WorkingDirectory>
+    <OutputPath>.</OutputPath>
+    <ProjectTypeGuids>{888888a0-9f3d-457c-b088-3a5042f75d52}</ProjectTypeGuids>
+    <LaunchProvider>Standard Python launcher</LaunchProvider>
+    <InterpreterId>MSBuild|env|$(MSBuildProjectFullPath)</InterpreterId>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)' == 'Debug'" />
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'" />
+  <PropertyGroup>
+    <VisualStudioVersion Condition=" '$(VisualStudioVersion)' == '' ">10.0</VisualStudioVersion>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="main.py" />
+    <Compile Include="roll_handler.py" />
+    <Compile Include="settings.py" />
+    <Compile Include="settings.example.py" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="screenshots\10x_summon_button.png" />
+    <Content Include="screenshots\1x_summon_button.png" />
+    <Content Include="screenshots\all_gifts_received.png" />
+    <Content Include="screenshots\attack.png" />
+    <Content Include="screenshots\battle_result_screen.png" />
+    <Content Include="screenshots\bonuses_received.png" />
+    <Content Include="screenshots\bonus_close_button.png" />
+    <Content Include="screenshots\ce_list_ready.png" />
+    <Content Include="screenshots\ce_prompt.png" />
+    <Content Include="screenshots\change_target_prompt.png" />
+    <Content Include="screenshots\crash_from_launcher.png" />
+    <Content Include="screenshots\enough_quartz.png" />
+    <Content Include="screenshots\first_multi_summon_ce_prompt.png" />
+    <Content Include="screenshots\first_multi_summon_info_prompt.png" />
+    <Content Include="screenshots\grand_order_icon.png" />
+    <Content Include="screenshots\ip_ban.png" />
+    <Content Include="screenshots\ip_ban_large.png" />
+    <Content Include="screenshots\issue_transfer_number_prompt.png" />
+    <Content Include="screenshots\lock.png" />
+    <Content Include="screenshots\lock_enabled.png" />
+    <Content Include="screenshots\mission_select_2.png" />
+    <Content Include="screenshots\mission_select_3.png" />
+    <Content Include="screenshots\mission_select_protag.png" />
+    <Content Include="screenshots\mission_select_protag_dimmed.png" />
+    <Content Include="screenshots\name_prompt.png" />
+    <Content Include="screenshots\next_button_after_battle.png" />
+    <Content Include="screenshots\next_button_during_tutorial_summon.png" />
+    <Content Include="screenshots\not_enough_quartz.png" />
+    <Content Include="screenshots\party_formation_prompt_close.png" />
+    <Content Include="screenshots\party_formation_prompt_ready.png" />
+    <Content Include="screenshots\receive_all_gifts_button.png" />
+    <Content Include="screenshots\relaunch_screen.png" />
+    <Content Include="screenshots\saint_quartz_reward_screen_after_battle.png" />
+    <Content Include="screenshots\servant_list_ready.png" />
+    <Content Include="screenshots\setup_party_prompt_1.png" />
+    <Content Include="screenshots\setup_party_prompt_2.png" />
+    <Content Include="screenshots\setup_party_prompt_3.png" />
+    <Content Include="screenshots\setup_party_prompt_4.png" />
+    <Content Include="screenshots\setup_party_prompt_5.png" />
+    <Content Include="screenshots\setup_party_prompt_6.png" />
+    <Content Include="screenshots\setup_party_prompt_7.png" />
+    <Content Include="screenshots\setup_party_prompt_8.png" />
+    <Content Include="screenshots\skill_selection.png" />
+    <Content Include="screenshots\skip_1.png" />
+    <Content Include="screenshots\skip_2.png" />
+    <Content Include="screenshots\skip_3.png" />
+    <Content Include="screenshots\skip_4.png" />
+    <Content Include="screenshots\skip_5.png" />
+    <Content Include="screenshots\skip_6.png" />
+    <Content Include="screenshots\skip_7.png" />
+    <Content Include="screenshots\skip_8.png" />
+    <Content Include="screenshots\skip_9.png" />
+    <Content Include="screenshots\summons\altera.png" />
+    <Content Include="screenshots\summons\around.png" />
+    <Content Include="screenshots\summons\atalanta.png" />
+    <Content Include="screenshots\summons\atalanta_large.png" />
+    <Content Include="screenshots\summons\craft.png" />
+    <Content Include="screenshots\summons\emiya.png" />
+    <Content Include="screenshots\summons\emiya_large.png" />
+    <Content Include="screenshots\summons\gil.png" />
+    <Content Include="screenshots\summons\gil_large.png" />
+    <Content Include="screenshots\summons\herc.png" />
+    <Content Include="screenshots\summons\herc_large.png" />
+    <Content Include="screenshots\summons\hf.png" />
+    <Content Include="screenshots\summons\hf_large.png" />
+    <Content Include="screenshots\summons\jeanne.png" />
+    <Content Include="screenshots\summons\jeanne_large.png" />
+    <Content Include="screenshots\summons\lancelot.png" />
+    <Content Include="screenshots\summons\lancelot_large.PNG" />
+    <Content Include="screenshots\summons\lily.png" />
+    <Content Include="screenshots\summons\lily_large.png" />
+    <Content Include="screenshots\summons\liz.png" />
+    <Content Include="screenshots\summons\liz_large.png" />
+    <Content Include="screenshots\summons\loz.png" />
+    <Content Include="screenshots\summons\loz_large.png" />
+    <Content Include="screenshots\summons\prisma.png" />
+    <Content Include="screenshots\summons\prisma_large.png" />
+    <Content Include="screenshots\summons\saber.png" />
+    <Content Include="screenshots\summons\saber_large.png" />
+    <Content Include="screenshots\summons\scope.png" />
+    <Content Include="screenshots\summons\scope_large.png" />
+    <Content Include="screenshots\summons\sieg.png" />
+    <Content Include="screenshots\summons\sieg_large.png" />
+    <Content Include="screenshots\summons\tamacat.png" />
+    <Content Include="screenshots\summons\tamacat_large.png" />
+    <Content Include="screenshots\summons\vlad.png" />
+    <Content Include="screenshots\summons\vlad_large.png" />
+    <Content Include="screenshots\summons\waver.png" />
+    <Content Include="screenshots\summon_button_after_tutorial_summon.png" />
+    <Content Include="screenshots\summon_screen_close.png" />
+    <Content Include="screenshots\terms_of_service.png" />
+    <Content Include="screenshots\title_screen.png" />
+    <Content Include="screenshots\transfer_number_issues_successfully.png" />
+    <Content Include="screenshots\tutorial_10x_button.png" />
+    <Content Include="screenshots\tutorial_summon_main_screen_prompt.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="screenshots" />
+    <Folder Include="screenshots\summons" />
+  </ItemGroup>
+  <ItemGroup>
+    <Interpreter Include="env\">
+      <Id>env</Id>
+      <Version>3.6</Version>
+      <Description>env (Python 3.6 (64-bit))</Description>
+      <InterpreterPath>Scripts\python.exe</InterpreterPath>
+      <WindowsInterpreterPath>Scripts\pythonw.exe</WindowsInterpreterPath>
+      <PathEnvironmentVariable>PYTHONPATH</PathEnvironmentVariable>
+      <Architecture>X64</Architecture>
+    </Interpreter>
+  </ItemGroup>
+  <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
+</Project>

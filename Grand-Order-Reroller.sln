@@ -1,0 +1,23 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.27428.2015
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "Grand-Order-Reroller", "Grand-Order-Reroller.pyproj", "{42D8D6F7-7A91-46CC-95A3-82AD17B02202}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{42D8D6F7-7A91-46CC-95A3-82AD17B02202}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{42D8D6F7-7A91-46CC-95A3-82AD17B02202}.Release|Any CPU.ActiveCfg = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {E0851657-A861-4BB1-91F8-8ACA6EC840D9}
+	EndGlobalSection
+EndGlobal
