@@ -10,7 +10,7 @@ from settings import PASSWORD, NAME
 
 ############
 # Settings #
-PAUSE_TIME = 1.5
+PAUSE_TIME = 1.4
 TIMING_MULT = 1.5
 CLOSENESS_THRESHOLD = 0.8
 ROLLS_FOLDER = 'rolls'
@@ -34,6 +34,7 @@ NEXT = {'x': 1110, 'y': 700}
 CLOSE = {'x': 640, 'y': 590}
 MENU = {'x': 1190, 'y': 715}
 LEFT_EDGE = {'x': 10,'y': 400}
+EXIT_TOP_RIGHT = {'x': 1248,'y': 62}
 
 SERV_HEIGHT = 540
 CES_HEIGHT = 350
@@ -60,8 +61,20 @@ def skip_scene():
     touch(**SKIP_BUTTON)
     touch(**CONFIRM)
 
+def goto_home():
+    global GO_ICON
+    while True:
+        touch(**HOME_BUTTON)
+        wait_until('app')
+        apploc = pyautogui.locateCenterOnScreen(os.path.join('screenshots', 'app.png'))
+        if apploc is None:
+            continue
+        GO_ICON = {'x': apploc[0] - WIN_X, 'y': apploc[1] - WIN_Y}
+        break
+
+
 def close_app():
-    touch(**HOME_BUTTON)
+    goto_home()
     touch(x=1300, y=700)
 
     while True:
@@ -78,16 +91,21 @@ def close_app():
             break
 
 def clear_app():
-    touch(**HOME_BUTTON)
+    while True:
+        close_app()
+        goto_home()
     
-    # Open App Info
-    move_to(**GO_ICON)
-    drag_to(**APP_INFO, duration=5, tween=pyautogui.easeInQuad)
+        # Open App Info
+        move_to(**GO_ICON)
+        drag_to(**APP_INFO, duration=5, tween=pyautogui.easeInOutExpo)
     
-    wait_until('app_info')
-    touch(982, 596)                                                 # Press delete data
-    wait(1)
-    touch(812, 505)                                                 # Press Ok
+        result = wait_until('app_info', maxTries=50)
+        if result is None:
+            continue
+        touch(982, 596)                                                 # Press delete data
+        wait(1)
+        touch(812, 505)                                                 # Press Ok
+        break
 
 def select_card(card_no):
     locations = {1: 140, 2: 390, 3: 650, 4: 900, 5: 1160}
@@ -112,8 +130,29 @@ def image_is_on_screen(template_name):
 
     return False
 
+def check_window():
+    global WIN_X
+    global WIN_Y
+
+    window_msg = False
+    while True:
+        loc = window_location()
+        if loc is None:
+            if not window_msg:
+                print("Waiting for window...")
+                window_msg = True
+            wait(1)
+        else:
+            WIN_X = loc[0]
+            WIN_Y = loc[1]
+
+            pyautogui.PAUSE = 0.0
+            pyautogui.click(x=WIN_X+2, y=WIN_Y+2)
+            pyautogui.PAUSE = PAUSE_TIME
+            break    
+
 def click_until(*images):
-    pyautogui.PAUSE = 0.2 * PAUSE_TIME
+    pyautogui.PAUSE = 0.3
     
     while True:
         while not window_visible():
@@ -154,225 +193,197 @@ def window_location():
 def window_visible():
     return window_location() is not None
 
-if __name__ == '__main__':
+def scene_1_first_battle():
+    wait_until('attack')
+    touch(**ATTACK)
+    select_card(1)
+    select_card(2)
+    select_card(3)
 
-    if not os.path.exists(ROLLS_FOLDER):
-        os.mkdir(ROLLS_FOLDER)
+    wait_until('attack')
+    touch(**ATTACK)
+    select_card(1)
+    select_card(2)
+    select_card(3)
 
-    window_msg = False
-    while not window_visible():
-        if not window_msg:
-            print("Waiting for window...")
-            window_msg = True
-        wait(1)
+    wait_until('attack')
+    touch(**ATTACK)
+    select_card(1)
+    select_card(2)
+    select_card(3)
 
-    winlocation = window_location()
-    if winlocation is None:
-        print('window not found!')
-        exit(1)
+    wait_until('attack')
+    touch(**ATTACK)
+    wait(2)
+    touch(**CONFIRM)
+    select_card(1)
+    select_card(2)
+    select_card(3)
+    wait_until('attack')
 
-    WIN_X = winlocation[0]
-    WIN_Y = winlocation[1]
+    touch(**ATTACK)
+    touch(**EXCAL)
+    select_card(1)
+    select_card(2)
+def scene_2_battle():
+    wait_until('attack')
+    touch(**ATTACK)
+    select_card(2)
+    select_card(3)
+    select_card(1)
 
-    app = pyautogui.screenshot(
-                region=(WIN_X, WIN_Y, 1300, 750))
-
-    results = Image.new('RGB', (1300, 750))
-    results.paste(app, (0, 0))
-    results.save(os.path.join(ROLLS_FOLDER,
-                            'app.png'))
-
-    while True:
-        # Clear Data
-        close_app()
-        clear_app()
+    wait_until('skill_selection')
+    touch(x=166, y=607)                                         # Mash Ability
+    touch(x=850, y=460)                                         # Confirm
+    touch(x=644, y=455)                                         # Select Target
         
+    wait_until('attack')
+    touch(**ATTACK)
+    wait(2)
+    touch(x=1140, y=90)                                         # Battle Speed
+    select_card(1)
+    select_card(2)
+    select_card(3)
 
-        # First Launch
-        touch(**HOME_BUTTON)
-        touch(**GO_ICON)                                            # Game Icon
+    wait_until('battle_result_screen')
+    click_until('next_button_after_battle')
+    touch(**NEXT)
 
-        result = wait_until('title_screen2',
-                            'ip_ban',
-                            'grand_order_icon',
-                            'crash_from_launcher',
-                            'relaunch_screen')
+def scene_3_battle():
+    wait_until('attack')
+    touch(**ATTACK)
+    select_card(1)
+    select_card(2)
+    select_card(3)
 
-        if result == 0:                                             # Main Screen
-            pass
+    wait_until('change_target_prompt')
+    touch(x=300, y=330)                                         # Change Target
+    touch(**ATTACK)
+    select_card(1)
+    select_card(3)
+    select_card(2)
 
-        # Failed To Launch?
+    wait_until('attack')
+    touch(**ATTACK)
+    select_card(1)
+    select_card(2)
+    select_card(3)
 
-        elif result == 1:                                           # IP Ban
-            close_app()
-            time.sleep(600)
+    wait_until('battle_result_screen')
+    click_until('next_button_after_battle')
+    touch(**NEXT)
+
+def non_tutorial_battle():
+    while True:
+        result = wait_until('attack',
+                            'battle_result_screen')
+
+        if result == 0:
+            touch(**ATTACK)
+            select_card(1)
+            select_card(2)
+            select_card(3)
+        else:
+            break
+
+    click_until('next_button_after_battle')
+    touch(**NEXT)
+    touch(x=320, y=650)                                         # Do Not Request friendship
+
+def step_correction(scene):
+    while True:
+        result = wait_until(scene, 'connecting', 'loading', maxTries=200)
+        if result == 0:
+            return None
+        elif result == 1 or result == 2:
+            wait_for_loading()
             continue
+        else:
+            possible_step = try_get_step()
+            if possible_step is not None:
+                return possible_step
 
-        elif result == 2:                                           # Launcher
-            continue
+def do_step(step):
+    check_window()
 
-        elif result == 3:                                           # Crash Message
-            touch(x=990, y=440)
-            continue
-
-        elif result == 4:                                           # Relaunch without clearing
-            close_app()
-            touch(**CLEAR_DATA_ICON)
-            wait(1)
-            continue
-
-        # Intro
-        click_until('terms_of_service')
-        touch(**CONFIRM)                                            # Accept ToS
-        wait_until('skip_1')
-        skip_scene()
-
-        # First Battle
-
-        wait_until('attack')
-        touch(**ATTACK)
-        select_card(1)
-        select_card(2)
-        select_card(3)
-
-        wait_until('attack')
-        touch(**ATTACK)
-        select_card(1)
-        select_card(2)
-        select_card(3)
-
-        wait_until('attack')
-        touch(**ATTACK)
-        select_card(1)
-        select_card(2)
-        select_card(3)
-
-        wait_until('attack')
-        touch(**ATTACK)
-        wait(2)
-        touch(**CONFIRM)
-        select_card(1)
-        select_card(2)
-        select_card(3)
-        wait_until('attack')
-
-        touch(**ATTACK)
-        touch(**EXCAL)
-        select_card(1)
-        select_card(2)
-
-        # Story
-
+    if step == 0:
+        result = wait_until('skip_1', 'attack', maxTries=100)
+        if result == 0:
+            skip_scene()
+            return step
+        if result == 1:
+            scene_1_first_battle()
+        else:
+            cor = step_correction('attack')
+            if cor is not None:
+                return cor
+            return step
+    elif step == 1:
         wait_until('skip_2')
         skip_scene()
-
+    elif step == 2:
         wait_until('name_prompt')
         touch(**NAME_FIELD)
         pyautogui.typewrite(NAME, interval = 0.25)
         touch(**NAME_CONFIRM)
         touch(**NAME_CONFIRM)
         touch(**NAME_CONFIRM_2)
-
+    elif step == 3:
         wait_until('skip_3')
         skip_scene()
-
+    elif step == 4:
         wait_until('mission_x-a')
         touch(x=650, y=390)                                         # Mission Select 1
         touch(x=1000, y=200)                                        # Mission Select 2
+    elif step == 5:
         wait_until('skip_4')
         skip_scene()
-
         # Second Battle
-
-        wait_until('attack')
-        touch(**ATTACK)
-        select_card(2)
-        select_card(3)
-        select_card(1)
-
-        wait_until('skill_selection')
-        touch(x=166, y=607)                                         # Mash Ability
-        touch(x=850, y=460)                                         # Confirm
-        touch(x=644, y=455)                                         # Select Target
-        
-        wait_until('attack')
-        touch(**ATTACK)
-        wait(2)
-        touch(x=1140, y=90)                                         # Battle Speed
-        select_card(1)
-        select_card(2)
-        select_card(3)
-
-        wait_until('battle_result_screen')
-        click_until('next_button_after_battle')
-        touch(**NEXT)
-
+        scene_2_battle()
+    elif step == 6:
         wait_until('skip_5')
         skip_scene()
-
         wait_until('saint_quartz_reward_screen_after_battle')
         touch(x=640, y=430)
-
-        # Story
-
+    elif step == 7:
         wait_until('mission_select_2')
         touch(x=640, y=430)                                         # Mission Select 1
         touch(x=1000, y=200)                                        # Mission Select 2
+    elif step == 8:
         wait_until('skip_6')
         skip_scene()
-
         # Third Battle
-
-        wait_until('attack')
-        touch(**ATTACK)
-        select_card(1)
-        select_card(2)
-        select_card(3)
-
-        wait_until('change_target_prompt')
-        touch(x=300, y=330)                                         # Change Target
-        touch(**ATTACK)
-        select_card(1)
-        select_card(3)
-        select_card(2)
-
-        wait_until('attack')
-        touch(**ATTACK)
-        select_card(1)
-        select_card(2)
-        select_card(3)
-
-        wait_until('battle_result_screen')
-        click_until('next_button_after_battle')
-        touch(**NEXT)
-
+        scene_3_battle()
+    elif step == 9:
         wait_until('skip_7')
         skip_scene()
 
         wait_until('saint_quartz_reward_screen_after_battle')
         touch(**MENU)
-
+    elif step == 10:
         # Summon
-
         wait_until('tutorial_summon_main_screen_prompt')
-        wait(3)
+        wait_until('menu')
 
         touch(**MENU)                                               # Menu Button
+
         touch(x=540, y=680)                                         # Summon Button
-        wait_until('tutorial_10x_button')
-        touch(x=640, y=600)                                         # Select 10x Summon
-        touch(x=830, y=600)                                         # Confirm Summon
+        result = wait_until('tutorial_10x_button', maxTries = 75)
+        if result is not None:
+            touch(x=640, y=600)                                         # Select 10x Summon
+            touch(x=830, y=600)                                         # Confirm Summon
 
-        click_until('next_button_during_tutorial_summon')
-        touch(**NEXT)
+            click_until('next_button_during_tutorial_summon')
+            touch(**NEXT)
 
-        click_until('summon_button_after_tutorial_summon')
+            click_until('summon_button_after_tutorial_summon')
 
-        # Finish Tutorial
+            # Finish Tutorial
 
-        touch(x=760, y=700)                                         # Summon Button
-        wait_until('setup_party_prompt_1')
-        touch(**MENU)                                               # Menu Button
+            touch(x=760, y=700)                                         # Summon Button
+            wait_until('setup_party_prompt_1')
+            touch(**MENU)                                               # Menu Button
+
         wait_until('setup_party_prompt_2')
         touch(x=170, y=680)                                         # Formation Button
         wait_until('setup_party_prompt_3')
@@ -387,10 +398,8 @@ if __name__ == '__main__':
         wait_until('setup_party_prompt_7')
         touch(x=100, y=75)                                          # Close Button
         wait_until('setup_party_prompt_8')
-        touch(x=100, y=75)   
-        wait(4)
-        touch(x=100, y=75)           
-
+        touch(x=100, y=75)
+    elif step == 11:
         # Final Battle - Non-deterministic                          
 
         wait_until('mission_select_3')
@@ -403,26 +412,11 @@ if __name__ == '__main__':
         wait_until('skip_8')
         skip_scene()
 
-        while True:
-
-            result = wait_until('attack',
-                                'battle_result_screen')
-
-            if result == 0:
-                touch(**ATTACK)
-                select_card(1)
-                select_card(2)
-                select_card(3)
-            else:
-                break
-
-        click_until('next_button_after_battle')
-        touch(**NEXT)
-        touch(x=320, y=650)                                         # Do Not Request
-
+        non_tutorial_battle()
+    elif step == 12:
         wait_until('skip_9')
         skip_scene()
-
+    elif step == 13:
         result = wait_until('login_bonus', maxTries=20)
         if result is not None:
             touch(**CLOSE)
@@ -431,14 +425,16 @@ if __name__ == '__main__':
             #    if image_is_on_screen('bonuses_received'):
             #        break
             #    touch(**CLOSE)
+    elif step == 14:
+        #touch(x=100, y=75)                                          # Close Button
+        #wait(1)
 
-        touch(x=100, y=75)                                          # Close Button
-        wait(1)
+        wait_until('menu')
 
         touch(x=440, y=700)                                         # Gift Box
         wait_until('receive_all_gifts_button')
         touch(x=1100, y=250)                                        # Receive All
-        
+
         #click_until('lock')
         #touch(x=50, y=75)                                           # Close
         #click_until('lock')
@@ -446,12 +442,14 @@ if __name__ == '__main__':
 
         wait_until('all_gifts_received')
         touch(x=110, y=90)                                          # Close Prompt
+    elif step == 15:
+        wait_until('menu')
 
         # Multi Summon
 
         # wait_until('mission_select_protag')
         touch(**MENU)                                               # Menu Button
-        touch(x=540, y=680)                                         # Summon Button
+        touch(x=540, y=680)                                         # Summon Button        
 
         result = wait_until('first_multi_summon_info_prompt', maxTries=150)
         if result is None:
@@ -475,37 +473,34 @@ if __name__ == '__main__':
         #touch(x=770, y=700)                                         # Summon Button
 
         while True:
-            wait_until('1x_summon_button')
-            touch(x=450, y=600)                                     # 1x Summon
-
-            result_1 = wait_until('not_enough_quartz',
-                                'enough_quartz')
-
-            if result_1 == 1:                                       # More Summons
-                touch(x=830, y=600)                                 # Confirm Summon
-                wait(5)                                             # CV is too fast
-                
-                result_2 = click_until('lock',
-                                       'lock_enabled',
-                                       'summon_screen_close',
-                                       'summon_screen_close_details')
-                if (result_2 == 0) or (result_2 == 1):
-                    touch(x=50, y=75)                               # Close
-                elif result_2 == 3:
-                    touch(1247, 61)                                 # Close
-
-                    result_2 = wait_until('lock', 'lock_enabled', maxTries=15)
-                    if (result_2 == 0) or (result_2 == 1):
-                        touch(x=50, y=75)                               # Close
-
-            else:                                                   # No More Summons
+            result = wait_until('1x_summon_button',
+                                'not_enough_quartz',
+                                'enough_quartz',
+                                'lock',
+                                'lock_enabled',
+                                'summon_screen_close_details')
+            if result == 0:
+                touch(x=450, y=600)                                     # 1x Summon
+            elif result == 1:
                 touch(x=440, y=600)
                 break
+            elif result == 2:                                       # More Summons
+                touch(x=830, y=600)                                 # Confirm Summon
+                wait(2)
+                click_until('1x_summon_button','lock',
+                            'lock_enabled',
+                            'summon_screen_close_details')
+            elif result == 3 or result == 4:
+                touch(x=50, y=75)                                   # Close
+            elif result == 5:
+                touch(1247, 61)                                     # Close
 
         # Take Screenshots
 
         touch(**MENU)
         touch(x=175, y=675)                                         # Formation
+        wait(1)
+        
         result = wait_until('party_formation_prompt_close', 'party_formation_prompt_ready')
         if result == 0:
             touch(x=1250, y=70)                                         # Close
@@ -582,7 +577,7 @@ if __name__ == '__main__':
             # In Memory of Account 17_07_05_15_44, we now make SURE
             # that a bind code was issued.
 
-            wait(5)
+            wait_until('transfer_number_issues_successfully', maxTries=100)
 
             if not image_is_on_screen('transfer_number_issues_successfully'):
                 # We failed to issue a bind code.
@@ -621,3 +616,101 @@ if __name__ == '__main__':
 
         # bind_code.save(os.path.join(ROLLS_FOLDER, filename + '.png'))
         # touch(x=430, y=600)                                         # Close Issue Transfer Number Screen
+        clear_app()
+    else:
+        return -1
+    return step + 1
+        
+def try_get_step():
+    return wait_until('skip_1',
+                'skip_2',
+                'name_prompt',
+                'skip_3',
+                'mission_x-a',
+                'skip_4',
+                'skip_5',
+                'mission_select_2',
+                'skip_6',
+                'skip_7',
+                'tutorial_summon_main_screen_prompt',
+                'mission_select_3',
+                'skip_9',
+                'login_bonus',
+                'gifts_button',
+                'menu', maxTries=15)
+
+if __name__ == '__main__':
+
+    if not os.path.exists(ROLLS_FOLDER):
+        os.mkdir(ROLLS_FOLDER)
+
+    check_window()
+
+    #app = pyautogui.screenshot(
+    #            region=(WIN_X, WIN_Y, 1300, 750))
+
+    #results = Image.new('RGB', (1300, 750))
+    #results.paste(app, (0, 0))
+    #results.save('app.png')
+
+    while True:
+        # First Launch
+        close_app()
+        goto_home()
+        touch(**GO_ICON)                                            # Game Icon
+
+        running = True
+        maxTriesFirstAction = None
+        while running:
+            result = wait_until('title_screen2',
+                                'ip_ban',
+                                'grand_order_icon',
+                                'crash_from_launcher',
+                                'close_dialog',
+                                'please_tap_the_screen',
+                                'terms_of_service', maxTries=maxTriesFirstAction)
+            maxTriesFirstAction = 10
+            
+            if result == 0:                                             # Main Screen
+                touch(**LEFT_EDGE)
+                continue
+            elif result == 1:                                           # IP Ban
+                running = False
+                close_app()
+                time.sleep(300)
+                break
+            elif result == 2:                                           # Launcher
+                continue
+            elif result == 3:                                           # Crash Message
+                touch(x=990, y=440)
+                running = False
+                break
+            elif result == 4:                                           
+                touch(**EXIT_TOP_RIGHT)
+                continue
+            elif result == 5:
+                touch(**LEFT_EDGE)
+                continue
+            elif result == 6:
+                touch(**CONFIRM)                                            # Accept ToS
+                continue
+            elif result == None:
+                if try_get_step() is not None:
+                    break
+        if not running:
+            continue
+
+        step = 0
+        wait(1)
+        if image_is_on_screen('terminal'):
+            step = 14
+        elif image_is_on_screen('menu'):
+            step = 10
+        while True:
+            step = do_step(step)
+            if step is None:
+                break
+            if step == -1:
+                break
+
+        
