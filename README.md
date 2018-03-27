@@ -20,7 +20,7 @@ However, it is not perfect. This method of rerolling has two major issues:
 
 # Basic Instructions:
 - [Install Python](https://wiki.python.org/moin/BeginnersGuide/Download). This project uses Python3. **Be sure to tick the 'add to path' button during setup.**
-- Run `pip install pyautogui numpy opencv-python pyperclip` to install dependencies.
+- Run `pip install pyautogui numpy opencv-python pyperclip scikit-image scipy` to install dependencies.
 - Download this repo.
 - [Setup MEmu](https://www.reddit.com/r/grandorder/comments/6akkkq/emu_wars_episode_x_return_of_the_emu/)
 - [Get Grand Order Image](https://www.reddit.com/r/grandorder/comments/6jompd/modified_memu_image_with_fgo_na_preloaded_and/)

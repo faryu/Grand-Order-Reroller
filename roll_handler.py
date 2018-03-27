@@ -6,21 +6,38 @@ from PIL import Image
 import cv2
 import numpy as np
 import shutil
+from skimage.measure import compare_ssim as ssim
 
 CLOSENESS_THRESHOLD = 0.8
 UNKNOWN_CARD_DIR = "unknown_card"
+CARD_DIR = os.path.join('screenshots', 'summons')
+CARD_IGNORE_DIR = 'ignore'
+CARD_RATED_DIR = 'rating'
 
-SS_5 = 700
-S_5 = 500
-A_5 = 300
-B_5 = 200
+rating = {
+    '5SS': 700,
+    '5S': 500,
+    '5A': 300,
+    '5B': 200,
+    '4SS': 150,
+    '4S': 100,
+    '4A': 60,
+    '4B': 40,
+    '4C': 20,
+    '4D': 10
+}
 
-SS_4 = 100
-S_4 = 100
-A_4 = 60
-B_4 = 40
-C_4 = 20
-D_4 = 10
+SS_5 = rating['5SS']
+S_5 = rating['5S']
+A_5 = rating['5A']
+B_5 = rating['5B']
+
+SS_4 = rating['4SS']
+S_4 = rating['4S']
+A_4 = rating['4A']
+B_4 = rating['4B']
+C_4 = rating['4C']
+D_4 = rating['4D']
 
 CARD_IGNORE = -1
 
@@ -76,10 +93,7 @@ possible_summons = {
     'lily': (C_4, 'Saber Lily'),
     'lily_large': (C_4, 'Saber Lily'),
     'nursery_rhyme': (A_4, 'Nursery Rhyme'),
-    'helena_blavatsky': (B_4, 'Helena Blavatsky'),
-    'mashu': (CARD_IGNORE, 'Mashu'),
-    'empty_1': (CARD_IGNORE, 'Empty'),
-    'medea': (CARD_IGNORE, 'Medea'),
+    'helena_blavatsky': (B_4, 'Helena Blavatsky')
 }
 
 def send_notif(points, summons):
@@ -90,7 +104,7 @@ def send_notif(points, summons):
 
 IMAGE_CACHE = {}
 def get_template(name):
-    filepath = os.path.join('screenshots', 'summons', name + '.png')
+    filepath = os.path.join(CARD_DIR, name + '.png') if not name.startswith(CARD_DIR) else name
     if filepath not in IMAGE_CACHE:
         IMAGE_CACHE[filepath] = cv2.imread(filepath, cv2.IMREAD_GRAYSCALE)
     return IMAGE_CACHE[filepath]
@@ -106,25 +120,29 @@ def identify_summons(image_path):
         detected = False
 
         card_gray = cv2.cvtColor(card, cv2.COLOR_BGR2GRAY)
-        star = get_template('star')
+        #star = get_template('star')
 
-        theight, twidth = star.shape
-        cheight, cwidth = card_gray.shape
+        #theight, twidth = star.shape
+        #cheight, cwidth = card_gray.shape
 
-        if cheight < theight or cwidth < twidth:
-            continue
+        #if cheight < theight or cwidth < twidth:
+        #    continue
 
-        res = cv2.matchTemplate(card_gray, star, cv2.TM_SQDIFF_NORMED)
-        loc = np.where(res >= CLOSENESS_THRESHOLD)
-        star_detected = False
-        for pt in zip(*loc[::-1]):
-            star_detected = True
-            break
-        if not star_detected:
-            continue
+        #res = cv2.matchTemplate(card_gray, star, cv2.TM_SQDIFF_NORMED)
+        #loc = np.where(res >= CLOSENESS_THRESHOLD)
+        #star_detected = False
+        #for pt in zip(*loc[::-1]):
+        #    star_detected = True
+        #    break
+        #if not star_detected:
+        #    continue
 
+        bg_min = None
+        bg_max = None
         for file_name, (point_value, actual_name) in possible_summons.items():
             template = get_template(file_name)
+            if template is None:
+                continue
 
             theight, twidth = template.shape
             cheight, cwidth = card_gray.shape
@@ -132,25 +150,41 @@ def identify_summons(image_path):
             if cheight < theight or cwidth < twidth:
                 continue
 
-            res = cv2.matchTemplate(card_gray, template, cv2.TM_CCOEFF_NORMED)
-            loc = np.where(res >= CLOSENESS_THRESHOLD)
+            if cheight == theight and cwidth == twidth and 'background' in file_name:
+                s = ssim(card_gray, template)
+                if bg_min is None or s < bg_min:
+                    bg_min = s
+                if bg_max is None or s > bg_max:
+                    bg_max = s
+            else:
+                res = cv2.matchTemplate(card_gray, template, cv2.TM_CCOEFF_NORMED)
+                loc = np.where(res >= CLOSENESS_THRESHOLD)
 
-            for pt in zip(*loc[::-1]):
-                # Due to weird behaviour, only add one instance of each summon
-                if actual_name in summons:
-                    continue
+                for pt in zip(*loc[::-1]):
+                    # Due to weird behaviour, only add one instance of each summon
+                    if actual_name in summons:
+                        continue
                 
-                detected = True
-                if point_value == CARD_IGNORE:
-                    break
-                summons.append(actual_name)
-                points += point_value
+                    detected = True
+                    if point_value == CARD_IGNORE:
+                        break
+            if detected:
+                if point_value != CARD_IGNORE:
+                    summons.append(actual_name)
+                    points += point_value
+                break
 
         if not detected:
+            if bg_max is not None and bg_max > 0.8:         # Skip background images
+                continue
             if not os.path.exists(UNKNOWN_CARD_DIR):
                 os.mkdir(UNKNOWN_CARD_DIR)
             filename = os.path.basename(image_path)
-            cv2.imwrite(os.path.join(UNKNOWN_CARD_DIR, "{}_{}".format(card_idx, filename)), card)
+            cv2.imwrite(os.path.join(UNKNOWN_CARD_DIR, "{:.2f}_{:.2f}_{}_{}".format(
+                bg_max if bg_max is not None else 0, 
+                bg_min if bg_min is not None else 0, 
+                card_idx, 
+                filename)), card)
         card_idx += 1
     return (summons, points) 
 
@@ -214,6 +248,19 @@ if __name__ == '__main__':
     if os.path.isdir(UNKNOWN_CARD_DIR):
         shutil.rmtree(UNKNOWN_CARD_DIR)
 
+    rating_dir = os.path.join(CARD_DIR, CARD_RATED_DIR)
+    for star_dir in os.listdir(rating_dir):
+        if star_dir not in rating:
+            print('unexpected rating entry: ' + star_dir)
+            continue
+        rating_val = rating[star_dir]
+        for file in os.listdir(os.path.join(rating_dir, star_dir)):
+            possible_summons[os.path.join(CARD_RATED_DIR, star_dir, file[:-4])] = (rating_val, file[:-4])
+
+    for root, dirs, files in os.walk(os.path.join(CARD_DIR, CARD_IGNORE_DIR), topdown=False):
+        for file in files:
+            possible_summons[os.path.join(root, file)] = (CARD_IGNORE, '')
+
     if True:
         for root, dirs, files in os.walk(ROLLS_FOLDER, topdown=False):
             for name in files:
@@ -224,7 +271,8 @@ if __name__ == '__main__':
     while True:
         try:
             for file in os.listdir(ROLLS_FOLDER):
-                    analyze(file, ROLLS_FOLDER)
+                print('Scanning file: {}'.format(file))
+                analyze(file, ROLLS_FOLDER)
         except Exception as e:
             print(repr(e))
             if NOTIF_ENABLE:

@@ -25,6 +25,7 @@
     <Compile Include="settings.example.py" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="README.md" />
     <Content Include="screenshots\10x_summon_button.png" />
     <Content Include="screenshots\1x_summon_button.png" />
     <Content Include="screenshots\all_gifts_received.png" />
