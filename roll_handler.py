@@ -2,8 +2,13 @@ import time
 import os, os.path
 from settings import PB_KEY, POINTS_THRESHOLD
 from main import ROLLS_FOLDER
+from PIL import Image
+import cv2
+import numpy as np
+import shutil
 
 CLOSENESS_THRESHOLD = 0.8
+UNKNOWN_CARD_DIR = "unknown_card"
 
 SS_5 = 700
 S_5 = 500
@@ -16,6 +21,8 @@ A_4 = 60
 B_4 = 40
 C_4 = 20
 D_4 = 10
+
+CARD_IGNORE = -1
 
 try:
     from pushbullet import Pushbullet
@@ -69,7 +76,10 @@ possible_summons = {
     'lily': (C_4, 'Saber Lily'),
     'lily_large': (C_4, 'Saber Lily'),
     'nursery_rhyme': (A_4, 'Nursery Rhyme'),
-    'helena_blavatsky': (B_4, 'Helena Blavatsky')
+    'helena_blavatsky': (B_4, 'Helena Blavatsky'),
+    'mashu': (CARD_IGNORE, 'Mashu'),
+    'empty_1': (CARD_IGNORE, 'Empty'),
+    'medea': (CARD_IGNORE, 'Medea'),
 }
 
 def send_notif(points, summons):
@@ -78,29 +88,91 @@ def send_notif(points, summons):
     pb.push_note('Roll with {} points.'.format(points), ', '.join(summons))
     time.sleep(2)
 
-def identify_summons(image_path):
-    import cv2
-    import numpy as np
+IMAGE_CACHE = {}
+def get_template(name):
+    filepath = os.path.join('screenshots', 'summons', name + '.png')
+    if filepath not in IMAGE_CACHE:
+        IMAGE_CACHE[filepath] = cv2.imread(filepath, cv2.IMREAD_GRAYSCALE)
+    return IMAGE_CACHE[filepath]
 
-    image = cv2.cvtColor(cv2.imread(image_path), cv2.COLOR_BGR2GRAY)
+def identify_summons(image_path):
+    #image = cv2.cvtColor(cv2.imread(image_path), cv2.COLOR_BGR2GRAY)
     summons = []
     points = 0
+    
+    card_idx = 0
+    cards = get_cards(image_path)
+    for card in cards:
+        detected = False
 
-    for file_name, (point_value, actual_name) in possible_summons.items():
-        template = cv2.imread(os.path.join('screenshots', 'summons', file_name + '.png'), cv2.IMREAD_GRAYSCALE)
+        card_gray = cv2.cvtColor(card, cv2.COLOR_BGR2GRAY)
+        star = get_template('star')
 
-        res = cv2.matchTemplate(image, template, cv2.TM_CCOEFF_NORMED)
+        theight, twidth = star.shape
+        cheight, cwidth = card_gray.shape
+
+        if cheight < theight or cwidth < twidth:
+            continue
+
+        res = cv2.matchTemplate(card_gray, star, cv2.TM_SQDIFF_NORMED)
         loc = np.where(res >= CLOSENESS_THRESHOLD)
-
+        star_detected = False
         for pt in zip(*loc[::-1]):
+            star_detected = True
+            break
+        if not star_detected:
+            continue
 
-            # Due to weird behaviour, only add one instance of each summon
-            if actual_name in summons:
+        for file_name, (point_value, actual_name) in possible_summons.items():
+            template = get_template(file_name)
+
+            theight, twidth = template.shape
+            cheight, cwidth = card_gray.shape
+
+            if cheight < theight or cwidth < twidth:
                 continue
-            summons.append(actual_name)
-            points += point_value
 
+            res = cv2.matchTemplate(card_gray, template, cv2.TM_CCOEFF_NORMED)
+            loc = np.where(res >= CLOSENESS_THRESHOLD)
+
+            for pt in zip(*loc[::-1]):
+                # Due to weird behaviour, only add one instance of each summon
+                if actual_name in summons:
+                    continue
+                
+                detected = True
+                if point_value == CARD_IGNORE:
+                    break
+                summons.append(actual_name)
+                points += point_value
+
+        if not detected:
+            if not os.path.exists(UNKNOWN_CARD_DIR):
+                os.mkdir(UNKNOWN_CARD_DIR)
+            filename = os.path.basename(image_path)
+            cv2.imwrite(os.path.join(UNKNOWN_CARD_DIR, "{}_{}".format(card_idx, filename)), card)
+        card_idx += 1
     return (summons, points) 
+
+CARD_WIDTH = 165
+CARD_HEIGHT = 181
+CARD_HEIGHT_LAST_ROW = 137
+
+def get_cards(file):
+    im = Image.open(file)
+    images = []
+
+    for row in range(0, 4):
+        top = (23 if row < 2 else 552) + 200 * (row%2)
+        for column in range(0, 6):
+            left = (5 if row < 2 else 21) + 187 * column
+            serv = Image.new('RGB', (CARD_WIDTH, CARD_HEIGHT if row < 3 else CARD_HEIGHT_LAST_ROW))
+            serv.paste(im, (-left, -top))
+
+            card = cv2.cvtColor(np.array(serv), cv2.COLOR_RGB2BGR)
+            images.append(card)
+
+    return images
 
 def analyze(file, rolls_folder = 'rolls'):
     file_abs = os.path.join(rolls_folder, file)
@@ -122,11 +194,7 @@ def analyze(file, rolls_folder = 'rolls'):
     return (summons, points)
 
 def gen_new_folder_name(file, rolls_folder = 'rolls'):
-    summons, points = [], 0
-
-    if os.path.isfile(file):
-        summons, points = identify_summons(file)
-
+    summons, points = identify_summons(file)
     new_folder = os.path.join('{:0>4}_{}'.format(points, ('-'.join(summons) if points else 'Shit Roll')))[1:]
 
     return (new_folder, summons, points)
@@ -142,7 +210,10 @@ def removeEmptyfolders(path):
 
 if __name__ == '__main__':
     print('Reroll analyzer started...')
-    
+
+    if os.path.isdir(UNKNOWN_CARD_DIR):
+        shutil.rmtree(UNKNOWN_CARD_DIR)
+
     if True:
         for root, dirs, files in os.walk(ROLLS_FOLDER, topdown=False):
             for name in files:

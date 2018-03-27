@@ -5,7 +5,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{42d8d6f7-7a91-46cc-95a3-82ad17b02202}</ProjectGuid>
     <ProjectHome />
-    <StartupFile>main.py</StartupFile>
+    <StartupFile>roll_handler.py</StartupFile>
     <SearchPath />
     <WorkingDirectory>.</WorkingDirectory>
     <OutputPath>.</OutputPath>
