@@ -61,15 +61,45 @@ def skip_scene():
     touch(**SKIP_BUTTON)
     touch(**CONFIRM)
 
+def locate_center(template_name):
+    template = cv2.imread(os.path.join(
+                                'screenshots', 
+                                template_name + '.png'), 
+                    cv2.IMREAD_GRAYSCALE)
+    image = cv2.cvtColor(
+                np.array(pyautogui.screenshot(
+                        region=(WIN_X, WIN_Y, 1300, 750))), 
+                cv2.COLOR_BGR2GRAY)
+
+    res = cv2.matchTemplate(image, template, cv2.TM_CCOEFF_NORMED)
+    loc = np.where(res >= CLOSENESS_THRESHOLD)
+
+    for pt in zip(*loc[::-1]):
+        min_y = min(loc[0])
+        max_y = max(loc[0])
+        min_x = min(loc[1])
+        max_x = max(loc[1])
+        x = int((max_x - min_x) / 2 + min_x)
+        y = int((max_y - min_y) / 2 + min_y)
+        return x, y
+    return None
+
+def wait_locate_center(name):
+    while True:
+        loc = locate_center(name)
+        if loc is None:
+            continue
+        return loc
+
 def goto_home():
     global GO_ICON
     while True:
         touch(**HOME_BUTTON)
         wait_until('app')
-        apploc = pyautogui.locateCenterOnScreen(os.path.join('screenshots', 'app.png'))
+        apploc = locate_center('app')
         if apploc is None:
             continue
-        GO_ICON = {'x': apploc[0] - WIN_X, 'y': apploc[1] - WIN_Y}
+        GO_ICON = {'x': apploc[0], 'y': apploc[1]}
         break
 
 
@@ -112,23 +142,7 @@ def select_card(card_no):
     touch(x=locations[card_no], y=530)
 
 def image_is_on_screen(template_name):
-    template = cv2.imread(os.path.join(
-                                'screenshots', 
-                                template_name + '.png'), 
-                    cv2.IMREAD_GRAYSCALE)
-    image = cv2.cvtColor(
-                np.array(pyautogui.screenshot(
-                        region=(WIN_X, WIN_Y, 1300, 750))), 
-                cv2.COLOR_BGR2GRAY)
-
-    res = cv2.matchTemplate(image, template, cv2.TM_CCOEFF_NORMED)
-    loc = np.where(res >= CLOSENESS_THRESHOLD)
-
-    # Not sure why this works but okay
-    for pt in zip(*loc[::-1]):
-        return True
-
-    return False
+    return locate_center(template_name) is not None
 
 def check_window():
     global WIN_X
@@ -365,7 +379,11 @@ def do_step(step):
         touch(**MENU)
     elif step == 10:
         # Summon
-        wait_until('tutorial_summon_main_screen_prompt')
+        result = wait_until('tutorial_summon_main_screen_prompt', 'bonus_close_button')
+        if result == 1:
+            btn = wait_locate_center('bonus_close_button')
+            touch(*btn)
+
         wait_until('menu')
 
         touch(**MENU)                                               # Menu Button
@@ -561,8 +579,9 @@ def do_step(step):
             touch(**MENU)
             touch(x=1080, y=680)
 
-            wait_until('my_room_prompt')
-            touch(x=1240, y=66)
+            result = wait_until('my_room_prompt', maxTries=50)
+            if result is not None:
+                touch(x=1240, y=66)
 
             while not image_is_on_screen('issue_transfer_number_prompt'):
                 touch(x=1260, y=650)                                # Scroll
