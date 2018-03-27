@@ -162,7 +162,8 @@ def click_until(*images):
                 pyautogui.PAUSE = PAUSE_TIME
                 wait(0.5)
                 return pos
-
+        if image_is_on_screen('connection_lost'):
+            raise ConnectionError()
         for _ in range(3):
             touch(**LEFT_EDGE)
 
@@ -172,6 +173,8 @@ def wait_until(*images, maxTries=None):
             if image_is_on_screen(image):
                 wait(0.5)
                 return pos
+        if image_is_on_screen('connection_lost'):
+            raise ConnectionError()
         if maxTries is not None:
             maxTries -= 1
             if maxTries <= 0:
@@ -644,8 +647,6 @@ if __name__ == '__main__':
     if not os.path.exists(ROLLS_FOLDER):
         os.mkdir(ROLLS_FOLDER)
 
-    check_window()
-
     #app = pyautogui.screenshot(
     #            region=(WIN_X, WIN_Y, 1300, 750))
 
@@ -654,63 +655,73 @@ if __name__ == '__main__':
     #results.save('app.png')
 
     while True:
-        # First Launch
-        close_app()
-        goto_home()
-        touch(**GO_ICON)                                            # Game Icon
-
-        running = True
-        maxTriesFirstAction = None
-        while running:
-            result = wait_until('title_screen2',
-                                'ip_ban',
-                                'grand_order_icon',
-                                'crash_from_launcher',
-                                'close_dialog',
-                                'please_tap_the_screen',
-                                'terms_of_service', maxTries=maxTriesFirstAction)
-            maxTriesFirstAction = 10
+        try:
+            check_window()
             
-            if result == 0:                                             # Main Screen
-                touch(**LEFT_EDGE)
-                continue
-            elif result == 1:                                           # IP Ban
-                running = False
-                close_app()
-                time.sleep(300)
-                break
-            elif result == 2:                                           # Launcher
-                continue
-            elif result == 3:                                           # Crash Message
-                touch(x=990, y=440)
-                running = False
-                break
-            elif result == 4:                                           
-                touch(**EXIT_TOP_RIGHT)
-                continue
-            elif result == 5:
-                touch(**LEFT_EDGE)
-                continue
-            elif result == 6:
-                touch(**CONFIRM)                                            # Accept ToS
-                continue
-            elif result == None:
-                if try_get_step() is not None:
-                    break
-        if not running:
-            continue
+            # First Launch
+            close_app()
+            goto_home()
+            touch(**GO_ICON)                                            # Game Icon
 
-        step = 0
-        wait(1)
-        if image_is_on_screen('terminal'):
-            step = 14
-        elif image_is_on_screen('menu'):
-            step = 10
-        while True:
-            step = do_step(step)
-            if step is None:
-                break
-            if step == -1:
-                break
+            running = True
+            maxTriesFirstAction = None
+            while running:
+                result = wait_until('title_screen2',
+                                    'ip_ban',
+                                    'grand_order_icon',
+                                    'crash_from_launcher',
+                                    'close_dialog',
+                                    'please_tap_the_screen',
+                                    'terms_of_service', maxTries=maxTriesFirstAction)
+                maxTriesFirstAction = 10
+            
+                if result == 0:                                             # Main Screen
+                    touch(**LEFT_EDGE)
+                    continue
+                elif result == 1:                                           # IP Ban
+                    running = False
+                    close_app()
+                    time.sleep(300)
+                    break
+                elif result == 2:                                           # Launcher
+                    continue
+                elif result == 3:                                           # Crash Message
+                    touch(x=990, y=440)
+                    running = False
+                    break
+                elif result == 4:                                           # News dialog
+                    touch(**EXIT_TOP_RIGHT)
+                    continue
+                elif result == 5:
+                    touch(**LEFT_EDGE)
+                    continue
+                elif result == 6:
+                    touch(**CONFIRM)                                            # Accept ToS
+                    continue
+                elif result == None:
+                    result = wait_until('login_bonus', maxTries=20)
+                    if result is not None:
+                        touch(**CLOSE)
+                    if try_get_step() is not None:
+                        break
+            if not running:
+                continue
+
+            step = 0
+            wait(1)
+            if image_is_on_screen('terminal'):
+                step = 14
+            elif image_is_on_screen('menu'):
+                step = 10
+            while True:
+                step = do_step(step)
+                if step is None:
+                    break
+                if step == -1:
+                    break
+        except ConnectionError:
+            print("Connection lost")
+        except Exception as e:
+            print(repr(e))
 
         

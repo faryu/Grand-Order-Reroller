@@ -5,6 +5,18 @@ from main import ROLLS_FOLDER
 
 CLOSENESS_THRESHOLD = 0.8
 
+SS_5 = 700
+S_5 = 500
+A_5 = 300
+B_5 = 200
+
+SS_4 = 100
+S_4 = 100
+A_4 = 60
+B_4 = 40
+C_4 = 20
+D_4 = 10
+
 try:
     from pushbullet import Pushbullet
     pb = Pushbullet(PB_KEY)
@@ -12,49 +24,52 @@ try:
 except:
     NOTIF_ENABLE = False
 
+# http://fategrandorder.gamea.co/c/nnp3zd71
+
 possible_summons = {
-    'waver': (200, 'Waver'),
-    'gil': (200, 'Gilgamesh'),
-    'gil_large': (200, 'Gilgamesh'),
-    'saber': (200, 'Arturia'),
-    'saber_large': (200, 'Arturia'),
-    'jeanne': (150, 'Jeanne'),
-    'jeanne_large': (150, 'Jeanne'),
-    'altera': (100, 'Altera'),
-    'vlad': (100, 'Vlad'),
-    'vlad_large': (100, 'Vlad'),
+    'waver': (SS_5, 'Waver'),
+    'gil': (A_5, 'Gilgamesh'),
+    'gil_large': (A_5, 'Gilgamesh'),
+    'saber': (B_5, 'Arturia'),
+    'saber_large': (B_5, 'Arturia'),
+    'jeanne': (A_5, 'Jeanne'),
+    'jeanne_large': (A_5, 'Jeanne'),
+    'altera': (A_5, 'Altera'),
+    'vlad': (A_5, 'Vlad'),
+    'vlad_large': (A_5, 'Vlad'),
     'scope': (60, 'Kaleidoscope'),
     'scope_large': (60, 'Kaleidoscope'),
-    'herc': (50, 'Heracles'),
-    'herc_large': (50, 'Heracles'),
-    'emiya': (50, 'EMIYA'),
-    'emiya_large': (50, 'EMIYA'),
+    'herc': (SS_4, 'Heracles'),
+    'herc_large': (SS_4, 'Heracles'),
+    'emiya': (B_4, 'EMIYA'),
+    'emiya_large': (B_4, 'EMIYA'),
     'loz': (45, 'Limited.Over Zero'),
     'loz_large': (45, 'Limited.Over Zero'),
     'hf': (45, 'Heaven\'s Feel'), 
     'hf_large': (45, 'Heaven\'s Feel'),   
-    'liz': (40, 'Elizabeth'),   
-    'liz_large': (40, 'Elizabeth'), 
-    'carmilla': (40, 'Cermilla'),
-    'sieg': (40, 'Siegfried'),
-    'sieg_large': (40, 'Siegfried'),
-    'chevalier': (40, 'Chevalier'),
-    'stheno': (40, 'Stheno'),
-    'martha': (40, 'Martha'),
-    'marie_antoinette': (40, 'Marie'),
+    'liz': (C_4, 'Elizabeth'),   
+    'liz_large': (C_4, 'Elizabeth'), 
+    'carmilla': (A_4, 'Cermilla'),
+    'sieg': (C_4, 'Siegfried'),
+    'sieg_large': (C_4, 'Siegfried'),
+    'chevalier': (B_4, 'Chevalier'),
+    'stheno': (D_4, 'Stheno'),
+    'martha': (B_4, 'Martha'),
+    'marie_antoinette': (B_4, 'Marie'),
     'craft': (40, 'Formal Craft'),
-    'lancelot': (40, 'Lancelot'),
-    'lancelot_large': (40, 'Lancelot'),
+    'lancelot': (B_4, 'Lancelot'),
+    'lancelot_large': (B_4, 'Lancelot'),
     'prisma': (40, 'Prisma Cosmos'),
     'prisma_large': (40, 'Prisma Cosmos'),
-    'tamacat': (40, 'Tamano-cat'),
-    'tamacat_large': (40, 'Tamano-cat'),
+    'tamacat': (B_4, 'Tamano-cat'),
+    'tamacat_large': (B_4, 'Tamano-cat'),
     'around': (30, 'Imaginary Around'),
-    'atalanta': (20, 'Atalanta'),
-    'atalanta_large': (20, 'Atalanta'),
-    'lily': (0, 'Saber Lily'),
-    'lily_large': (0, 'Saber Lily')
-
+    'atalanta': (C_4, 'Atalante'),
+    'atalanta_large': (C_4, 'Atalante'),
+    'lily': (C_4, 'Saber Lily'),
+    'lily_large': (C_4, 'Saber Lily'),
+    'nursery_rhyme': (A_4, 'Nursery Rhyme'),
+    'helena_blavatsky': (B_4, 'Helena Blavatsky')
 }
 
 def send_notif(points, summons):
