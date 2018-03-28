@@ -271,7 +271,6 @@ if __name__ == '__main__':
     while True:
         try:
             for file in os.listdir(ROLLS_FOLDER):
-                print('Scanning file: {}'.format(file))
                 analyze(file, ROLLS_FOLDER)
         except Exception as e:
             print(repr(e))

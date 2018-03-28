@@ -365,27 +365,30 @@ def do_step(step):
         touch(**MENU)
     elif step == 10:
         # Summon
-        wait_until('tutorial_summon_main_screen_prompt')
-        wait_until('menu')
+        result = wait_until('tutorial_summon_main_screen_prompt', 'tutorial_10x_button')
+        if result == 0:                                                 # Reopening the app without having summoned
+            wait_until('menu')
+            touch(**MENU)                                               # Menu Button
 
-        touch(**MENU)                                               # Menu Button
+            touch(x=540, y=680)                                         # Summon Button
+            result = wait_until('tutorial_10x_button', maxTries = 75)
 
-        touch(x=540, y=680)                                         # Summon Button
-        result = wait_until('tutorial_10x_button', maxTries = 75)
         if result is not None:
             touch(x=640, y=600)                                         # Select 10x Summon
-            touch(x=830, y=600)                                         # Confirm Summon
+            result = wait_until('enough_quartz', maxTries = 75)     # Wait for ok button. If it's not there, then it might be a reopened instances with formation as the next step
+            if result is not None:
+                touch(x=830, y=600)                                         # Confirm Summon
 
-            click_until('next_button_during_tutorial_summon')
-            touch(**NEXT)
+                click_until('next_button_during_tutorial_summon')
+                touch(**NEXT)
 
-            click_until('summon_button_after_tutorial_summon')
+                click_until('summon_button_after_tutorial_summon')
 
-            # Finish Tutorial
+                # Finish Tutorial
 
-            touch(x=760, y=700)                                         # Summon Button
-            wait_until('setup_party_prompt_1')
-            touch(**MENU)                                               # Menu Button
+                touch(x=760, y=700)                                         # Summon Button
+                wait_until('setup_party_prompt_1')
+                touch(**MENU)                                               # Menu Button
 
         wait_until('setup_party_prompt_2')
         touch(x=170, y=680)                                         # Formation Button
@@ -410,6 +413,7 @@ def do_step(step):
         touch(x=1000, y=200)                                        # Mission Select 2
         touch(x=1000, y=200)
         touch(x=500, y=300)                                         # Select Support
+        
         touch(**MENU)                                               # Start Button
 
         wait_until('skip_8')
