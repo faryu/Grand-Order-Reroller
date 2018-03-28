@@ -5,6 +5,7 @@ import pyautogui
 import numpy as np
 import os, os.path
 import pyperclip
+import datetime
 from PIL import Image
 from settings import PASSWORD, NAME
 
@@ -47,6 +48,13 @@ def wait(given_time):
     time.sleep(TIMING_MULT * given_time)
 
 def touch(x, y):
+    while True:
+        if loading_image_on_screen():
+            continue
+        if not image_is_on_screen('window'):
+            check_window()
+            continue
+        break
     pyautogui.click(x=WIN_X+x, y=WIN_Y+y)
 
 def move_to(x, y):
@@ -55,21 +63,68 @@ def move_to(x, y):
 def drag_to(x, y, duration=0, button='left', tween=pyautogui.linear):
     pyautogui.dragTo(WIN_X + x, WIN_Y + y, duration=duration, button=button, tween=tween)
 
-def skip_scene():
-    wait_for_loading()
+def touch_until_visible(x, y, image):
+    while True:
+        touch(x,y)
+        result = wait_until(image, maxTries = 3)
+        if result is not None:
+            break
 
-    touch(**SKIP_BUTTON)
-    touch(**CONFIRM)
+def skip_scene(skip, next = None):
+    arr = [skip]
+    maxTries = 1
+    if next is not None: 
+        arr.append(next)
+        maxTries = None
+    
+    wait_until(skip)
+    while wait_until(*arr, maxTries=maxTries) == 0:
+        touch(**SKIP_BUTTON)
+        touch(**CONFIRM)
+        if next is not None:
+            wait_until(next, maxTries = 2)
+        else:
+            wait(2)
+
+def locate_center(template_name):
+    template = cv2.imread(os.path.join(
+                                'screenshots', 
+                                template_name + '.png'), 
+                    cv2.IMREAD_GRAYSCALE)
+    image = cv2.cvtColor(
+                np.array(pyautogui.screenshot(
+                        region=(WIN_X, WIN_Y, 1300, 750))), 
+                cv2.COLOR_BGR2GRAY)
+
+    res = cv2.matchTemplate(image, template, cv2.TM_CCOEFF_NORMED)
+    loc = np.where(res >= CLOSENESS_THRESHOLD)
+
+    for pt in zip(*loc[::-1]):
+        min_y = min(loc[0])
+        max_y = max(loc[0])
+        min_x = min(loc[1])
+        max_x = max(loc[1])
+        x = int((max_x - min_x) / 2 + min_x)
+        y = int((max_y - min_y) / 2 + min_y)
+        return x, y
+    return None
+
+def wait_locate_center(name):
+    while True:
+        loc = locate_center(name)
+        if loc is None:
+            continue
+        return loc
 
 def goto_home():
     global GO_ICON
     while True:
         touch(**HOME_BUTTON)
         wait_until('app')
-        apploc = pyautogui.locateCenterOnScreen(os.path.join('screenshots', 'app.png'))
+        apploc = locate_center('app')
         if apploc is None:
             continue
-        GO_ICON = {'x': apploc[0] - WIN_X, 'y': apploc[1] - WIN_Y}
+        GO_ICON = {'x': apploc[0], 'y': apploc[1]}
         break
 
 
@@ -78,7 +133,7 @@ def close_app():
     touch(x=1300, y=700)
 
     while True:
-        result = wait_until('close_app_screen', 'close_app_empty', maxTries = 5)
+        result = wait_until('close_app_screen', 'close_app_empty', maxTries = 2)
 
         if result == 0:
             # App Switcher
@@ -99,7 +154,7 @@ def clear_app():
         move_to(**GO_ICON)
         drag_to(**APP_INFO, duration=5, tween=pyautogui.easeInOutExpo)
     
-        result = wait_until('app_info', maxTries=50)
+        result = wait_until('app_info', maxTries=5)
         if result is None:
             continue
         touch(982, 596)                                                 # Press delete data
@@ -112,23 +167,7 @@ def select_card(card_no):
     touch(x=locations[card_no], y=530)
 
 def image_is_on_screen(template_name):
-    template = cv2.imread(os.path.join(
-                                'screenshots', 
-                                template_name + '.png'), 
-                    cv2.IMREAD_GRAYSCALE)
-    image = cv2.cvtColor(
-                np.array(pyautogui.screenshot(
-                        region=(WIN_X, WIN_Y, 1300, 750))), 
-                cv2.COLOR_BGR2GRAY)
-
-    res = cv2.matchTemplate(image, template, cv2.TM_CCOEFF_NORMED)
-    loc = np.where(res >= CLOSENESS_THRESHOLD)
-
-    # Not sure why this works but okay
-    for pt in zip(*loc[::-1]):
-        return True
-
-    return False
+    return locate_center(template_name) is not None
 
 def check_window():
     global WIN_X
@@ -151,6 +190,11 @@ def check_window():
             pyautogui.PAUSE = PAUSE_TIME
             break    
 
+def check_error():
+    for pos, image in enumerate(['connection_lost', 'support_designation_error']):
+        if image_is_on_screen(image):
+            raise ConnectionError(image)
+
 def click_until(*images):
     pyautogui.PAUSE = 0.3
     
@@ -162,32 +206,47 @@ def click_until(*images):
                 pyautogui.PAUSE = PAUSE_TIME
                 wait(0.5)
                 return pos
-        if image_is_on_screen('connection_lost'):
-            raise ConnectionError()
+        check_error()
         for _ in range(3):
             touch(**LEFT_EDGE)
 
+def loading_image_on_screen():
+    for image in ['connecting', 'loading']:
+        if image_is_on_screen(image):
+            return True
+    return False
+
 def wait_until(*images, maxTries=None):
+    start_time = datetime.datetime.now()
+    timeout = 60
+    if maxTries is not None:
+        timeout += maxTries
     while True:
         for pos, image in enumerate(images):
             if image_is_on_screen(image):
                 wait(0.5)
                 return pos
-        if image_is_on_screen('connection_lost'):
-            raise ConnectionError()
-        if maxTries is not None:
-            maxTries -= 1
-            if maxTries <= 0:
-                return None
+        check_error()
+        if loading_image_on_screen():
+            start_time = datetime.datetime.now()
+        else:
+            delta = datetime.datetime.now() - start_time
+            if maxTries is not None:
+                if delta > datetime.timedelta(seconds=maxTries):
+                    return None
+            if delta > datetime.timedelta(seconds=timeout): # No reaction for some time?
+                raise ConnectionError("timeout during wait: " + ','.join(images))
 
 def wait_for_loading():
     notLoading = 0
+    was_loading = False
     while notLoading < 3:
-        if wait_until('connecting', 'loading', maxTries=2) is None:
+        if not loading_image_on_screen():
             notLoading += 1
         else:
             notLoading = 0
-            wait(0.5)
+            was_loading = True
+    return was_loading
 
 def window_location():
     return pyautogui.locateOnScreen(os.path.join(
@@ -295,7 +354,7 @@ def non_tutorial_battle():
 
 def step_correction(scene):
     while True:
-        result = wait_until(scene, 'connecting', 'loading', maxTries=200)
+        result = wait_until(scene, maxTries=5)
         if result == 0:
             return None
         elif result == 1 or result == 2:
@@ -310,20 +369,21 @@ def do_step(step):
     check_window()
 
     if step == 0:
-        result = wait_until('skip_1', 'attack', maxTries=100)
+        result = wait_until('skip_1', 'attack', 'name_prompt', maxTries=15)
         if result == 0:
-            skip_scene()
+            skip_scene('skip_1')
             return step
-        if result == 1:
+        elif result == 1:
             scene_1_first_battle()
+        elif result == 2:
+            return 2
         else:
             cor = step_correction('attack')
             if cor is not None:
                 return cor
             return step
     elif step == 1:
-        wait_until('skip_2')
-        skip_scene()
+        skip_scene('skip_2', 'name_prompt')
     elif step == 2:
         wait_until('name_prompt')
         touch(**NAME_FIELD)
@@ -332,50 +392,51 @@ def do_step(step):
         touch(**NAME_CONFIRM)
         touch(**NAME_CONFIRM_2)
     elif step == 3:
-        wait_until('skip_3')
-        skip_scene()
+        skip_scene('skip_3', 'mission_x-a')
     elif step == 4:
         wait_until('mission_x-a')
         touch(x=650, y=390)                                         # Mission Select 1
         touch(x=1000, y=200)                                        # Mission Select 2
     elif step == 5:
-        wait_until('skip_4')
-        skip_scene()
+        skip_scene('skip_4')
         # Second Battle
         scene_2_battle()
     elif step == 6:
-        wait_until('skip_5')
-        skip_scene()
-        wait_until('saint_quartz_reward_screen_after_battle')
-        touch(x=640, y=430)
+        skip_scene('skip_5')
+        while True:
+            result = wait_until('saint_quartz_reward_screen_after_battle', 'mission_select_2')
+            if result == 0:
+                touch(x=640, y=430)
+            elif result == 1:
+                break
     elif step == 7:
         wait_until('mission_select_2')
         touch(x=640, y=430)                                         # Mission Select 1
         touch(x=1000, y=200)                                        # Mission Select 2
     elif step == 8:
-        wait_until('skip_6')
-        skip_scene()
+        skip_scene('skip_6')
         # Third Battle
         scene_3_battle()
     elif step == 9:
-        wait_until('skip_7')
-        skip_scene()
-
-        wait_until('saint_quartz_reward_screen_after_battle')
-        touch(**MENU)
+        skip_scene('skip_7')
+        if wait_until('saint_quartz_reward_screen_after_battle', maxTries=5) == 0:
+            touch(**MENU)
     elif step == 10:
         # Summon
-        result = wait_until('tutorial_summon_main_screen_prompt', 'tutorial_10x_button')
-        if result == 0:                                                 # Reopening the app without having summoned
+        result = wait_until('tutorial_summon_main_screen_prompt', 'bonus_close_button', 'tutorial_10x_button', maxTries=5)
+        if result == 1:
+            btn = wait_locate_center('bonus_close_button')
+            touch(*btn)
+        if result == 0 or result == 1:                                  # Reopening the app without having summoned
             wait_until('menu')
             touch(**MENU)                                               # Menu Button
 
             touch(x=540, y=680)                                         # Summon Button
-            result = wait_until('tutorial_10x_button', maxTries = 75)
+            result = wait_until('tutorial_10x_button', maxTries = 5)
 
         if result is not None:
             touch(x=640, y=600)                                         # Select 10x Summon
-            result = wait_until('enough_quartz', maxTries = 75)     # Wait for ok button. If it's not there, then it might be a reopened instances with formation as the next step
+            result = wait_until('enough_quartz', maxTries = 5)     # Wait for ok button. If it's not there, then it might be a reopened instances with formation as the next step
             if result is not None:
                 touch(x=830, y=600)                                         # Confirm Summon
 
@@ -403,8 +464,9 @@ def do_step(step):
         touch(**MENU)                                               # OK Button
         wait_until('setup_party_prompt_7')
         touch(x=100, y=75)                                          # Close Button
-        wait_until('setup_party_prompt_8')
-        touch(x=100, y=75)
+        
+        while wait_until('setup_party_prompt_8', maxTries=1) == 0:
+            touch(x=100, y=75)
     elif step == 11:
         # Final Battle - Non-deterministic                          
 
@@ -413,18 +475,15 @@ def do_step(step):
         touch(x=1000, y=200)                                        # Mission Select 2
         touch(x=1000, y=200)
         touch(x=500, y=300)                                         # Select Support
-        
-        touch(**MENU)                                               # Start Button
 
-        wait_until('skip_8')
-        skip_scene()
+        touch_until_visible(**MENU, image='skip_8')                       # Start Button
+        skip_scene('skip_8')
 
         non_tutorial_battle()
     elif step == 12:
-        wait_until('skip_9')
-        skip_scene()
+        skip_scene('skip_9')
     elif step == 13:
-        result = wait_until('login_bonus', maxTries=20)
+        result = wait_until('login_bonus', maxTries=5)
         if result is not None:
             touch(**CLOSE)
 
@@ -458,7 +517,7 @@ def do_step(step):
         touch(**MENU)                                               # Menu Button
         touch(x=540, y=680)                                         # Summon Button        
 
-        result = wait_until('first_multi_summon_info_prompt', maxTries=150)
+        result = wait_until('first_multi_summon_info_prompt', maxTries=3)
         if result is None:
             result = wait_until('first_multi_summon_info_prompt', '1x_summon_button')
 
@@ -527,7 +586,7 @@ def do_step(step):
         touch(x=90, y=70)                                           # Close
         touch(x=335, y=510)                                         # Craft Essences
         
-        result = wait_until('ce_prompt', maxTries=150)
+        result = wait_until('ce_prompt', maxTries=5)
         if result is None:
             result = wait_until('ce_prompt', 'ce_list_ready')
 
@@ -565,8 +624,9 @@ def do_step(step):
             touch(**MENU)
             touch(x=1080, y=680)
 
-            wait_until('my_room_prompt')
-            touch(x=1240, y=66)
+            result = wait_until('my_room_prompt', maxTries=2)
+            if result is not None:
+                touch(x=1240, y=66)
 
             while not image_is_on_screen('issue_transfer_number_prompt'):
                 touch(x=1260, y=650)                                # Scroll
@@ -584,18 +644,9 @@ def do_step(step):
             # In Memory of Account 17_07_05_15_44, we now make SURE
             # that a bind code was issued.
 
-            wait_until('transfer_number_issues_successfully', maxTries=100)
-
-            if not image_is_on_screen('transfer_number_issues_successfully'):
-                # We failed to issue a bind code.
-                touch(**HOME_BUTTON)
-                close_app()
-                touch(**GO_ICON)
-                wait_until('tm')
-                touch(**GO_ICON)
-                wait_until('relaunch_screen')
-                touch(x=1250, y= 65)                                # Close Welcome Screen
-                wait_until('protag')
+            result = wait_until('transfer_number_issues_successfully', maxTries=10)
+            if result is None:
+                raise ConnectionError("Failed to bind account")
             else:
                 break
 
@@ -629,7 +680,7 @@ def do_step(step):
     return step + 1
         
 def try_get_step():
-    return wait_until('skip_1',
+    arr_steps = ['skip_1',
                 'skip_2',
                 'name_prompt',
                 'skip_3',
@@ -644,7 +695,14 @@ def try_get_step():
                 'skip_9',
                 'login_bonus',
                 'gifts_button',
-                'menu', maxTries=15)
+                'menu']
+    arr_quick = ['use_menu_to_summon','login_bonus', 'skip_1', 'skip_2', 'skip_3', 'skip_4', 'skip_5', 'skip_6', 'skip_7', 'skip_9', 'name_prompt', 'mission_select_3', 'mission_select_2', 'mission_x-a', 'gifts_button']
+    result = wait_until(*arr_quick, maxTries=3)
+    if result is not None:
+        if result == 0:
+            return 10   # Summon 10 free cards
+        return arr_steps.index(arr_quick[result])
+    return wait_until(*arr_steps)
 
 if __name__ == '__main__':
 
@@ -676,8 +734,11 @@ if __name__ == '__main__':
                                     'crash_from_launcher',
                                     'close_dialog',
                                     'please_tap_the_screen',
-                                    'terms_of_service', maxTries=maxTriesFirstAction)
-                maxTriesFirstAction = 10
+                                    'terms_of_service', 
+                                    'login_bonus',
+                                    'skip_1',
+                                    'name_prompt', maxTries=maxTriesFirstAction)
+                maxTriesFirstAction = 5
             
                 if result == 0:                                             # Main Screen
                     touch(**LEFT_EDGE)
@@ -702,8 +763,18 @@ if __name__ == '__main__':
                 elif result == 6:
                     touch(**CONFIRM)                                            # Accept ToS
                     continue
+                elif result == 7:                                           # Login Bonus
+                    touch(**CLOSE)
+                    if try_get_step() is not None:
+                        break
+                elif result == 8:                                           # First skip screen of the tutorial
+                    break
+                elif result == 9:                                           # Name prompt
+                    break
                 elif result == None:
-                    result = wait_until('login_bonus', maxTries=20)
+                    if wait_for_loading():
+                        continue
+                    result = wait_until('login_bonus', maxTries=3)
                     if result is not None:
                         touch(**CLOSE)
                     if try_get_step() is not None:
@@ -711,20 +782,24 @@ if __name__ == '__main__':
             if not running:
                 continue
 
-            step = 0
-            wait(1)
-            if image_is_on_screen('terminal'):
+            step = None
+            result = wait_until('skip_1', 'attack', 'name_prompt', 'terminal', maxTries=5)
+            if result == 0 or result == 1:
+                step = 0
+            elif result == 3:
                 step = 14
-            elif image_is_on_screen('menu'):
-                step = 10
+            else:
+                step = try_get_step()
+
             while True:
                 step = do_step(step)
                 if step is None:
                     break
                 if step == -1:
                     break
-        except ConnectionError:
-            print("Connection lost")
+        except ConnectionError as e:
+            str = repr(e.args)
+            print("Restart client: {}".format(str))
         except Exception as e:
             print(repr(e))
 

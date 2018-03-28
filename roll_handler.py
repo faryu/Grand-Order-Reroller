@@ -160,14 +160,9 @@ def identify_summons(image_path):
                 res = cv2.matchTemplate(card_gray, template, cv2.TM_CCOEFF_NORMED)
                 loc = np.where(res >= CLOSENESS_THRESHOLD)
 
-                for pt in zip(*loc[::-1]):
-                    # Due to weird behaviour, only add one instance of each summon
-                    if actual_name in summons:
-                        continue
-                
+                for pt in zip(*loc[::-1]):                
                     detected = True
-                    if point_value == CARD_IGNORE:
-                        break
+                    break
             if detected:
                 if point_value != CARD_IGNORE:
                     summons.append(actual_name)
