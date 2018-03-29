@@ -229,6 +229,7 @@ def click_until(*images):
 def loading_image_on_screen(window_image = None):
     if window_image is None:
         window_image = get_window_image()
+    check_error(window_image)
     for image in ['connecting', 'loading']:
         if image_is_on_screen(image, window_image):
             return True
