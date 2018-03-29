@@ -86,28 +86,40 @@ def skip_scene(skip, next = None):
         else:
             wait(2)
 
-def locate_center(template_name):
-    template = cv2.imread(os.path.join(
-                                'screenshots', 
-                                template_name + '.png'), 
-                    cv2.IMREAD_GRAYSCALE)
-    image = cv2.cvtColor(
-                np.array(pyautogui.screenshot(
-                        region=(WIN_X, WIN_Y, 1300, 750))), 
-                cv2.COLOR_BGR2GRAY)
+def get_window_image():
+    return cv2.cvtColor(np.array(pyautogui.screenshot(region=(WIN_X, WIN_Y, 1300, 750))), 
+                    cv2.COLOR_BGR2GRAY)
 
-    res = cv2.matchTemplate(image, template, cv2.TM_CCOEFF_NORMED)
-    loc = np.where(res >= CLOSENESS_THRESHOLD)
+IMAGE_CACHE = {}
+def get_template(name):
+    filepath = os.path.join('screenshots', name + '.png')
+    if filepath not in IMAGE_CACHE:
+        IMAGE_CACHE[filepath] = cv2.imread(filepath, cv2.IMREAD_GRAYSCALE)
+    return IMAGE_CACHE[filepath]
 
-    for pt in zip(*loc[::-1]):
-        min_y = min(loc[0])
-        max_y = max(loc[0])
-        min_x = min(loc[1])
-        max_x = max(loc[1])
-        x = int((max_x - min_x) / 2 + min_x)
-        y = int((max_y - min_y) / 2 + min_y)
-        return x, y
-    return None
+def locate_center(template_name, window_image = None):
+    try:
+        template = get_template(template_name)
+        
+        if template is None: # Image not found
+            return None
+
+        image = window_image if window_image is not None else get_window_image()
+
+        res = cv2.matchTemplate(image, template, cv2.TM_CCOEFF_NORMED)
+        loc = np.where(res >= CLOSENESS_THRESHOLD)
+
+        for pt in zip(*loc[::-1]):
+            min_y = min(loc[0])
+            max_y = max(loc[0])
+            min_x = min(loc[1])
+            max_x = max(loc[1])
+            x = int((max_x - min_x) / 2 + min_x)
+            y = int((max_y - min_y) / 2 + min_y)
+            return x, y
+        return None
+    except Exception as e:
+        raise
 
 def wait_locate_center(name):
     while True:
@@ -166,8 +178,8 @@ def select_card(card_no):
     locations = {1: 140, 2: 390, 3: 650, 4: 900, 5: 1160}
     touch(x=locations[card_no], y=530)
 
-def image_is_on_screen(template_name):
-    return locate_center(template_name) is not None
+def image_is_on_screen(template_name, window_image = None):
+    return locate_center(template_name, window_image) is not None
 
 def check_window():
     global WIN_X
@@ -190,9 +202,11 @@ def check_window():
             pyautogui.PAUSE = PAUSE_TIME
             break    
 
-def check_error():
+def check_error(window_image):
+    if window_image is None:
+        window_image = get_window_image()
     for pos, image in enumerate(['connection_lost', 'support_designation_error']):
-        if image_is_on_screen(image):
+        if image_is_on_screen(image, window_image):
             raise ConnectionError(image)
 
 def click_until(*images):
@@ -201,18 +215,22 @@ def click_until(*images):
     while True:
         while not window_visible():
             wait(1)
+        
+        window_image = get_window_image()
         for pos, image in enumerate(images):
-            if image_is_on_screen(image):
+            if image_is_on_screen(image, window_image):
                 pyautogui.PAUSE = PAUSE_TIME
                 wait(0.5)
                 return pos
-        check_error()
+        check_error(window_image)
         for _ in range(3):
             touch(**LEFT_EDGE)
 
-def loading_image_on_screen():
+def loading_image_on_screen(window_image = None):
+    if window_image is None:
+        window_image = get_window_image()
     for image in ['connecting', 'loading']:
-        if image_is_on_screen(image):
+        if image_is_on_screen(image, window_image):
             return True
     return False
 
@@ -222,12 +240,13 @@ def wait_until(*images, maxTries=None):
     if maxTries is not None:
         timeout += maxTries
     while True:
+        window_image = get_window_image()
         for pos, image in enumerate(images):
-            if image_is_on_screen(image):
+            if image_is_on_screen(image, window_image):
                 wait(0.5)
                 return pos
-        check_error()
-        if loading_image_on_screen():
+        check_error(window_image)
+        if loading_image_on_screen(window_image):
             start_time = datetime.datetime.now()
         else:
             delta = datetime.datetime.now() - start_time
@@ -798,8 +817,7 @@ if __name__ == '__main__':
                 if step == -1:
                     break
         except ConnectionError as e:
-            str = repr(e.args)
-            print("Restart client: {}".format(str))
+            print("Restart client: {}".format(repr(e.args)))
         except Exception as e:
             print(repr(e))
 
